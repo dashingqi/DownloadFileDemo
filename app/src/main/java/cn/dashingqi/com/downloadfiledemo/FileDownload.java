@@ -1,7 +1,6 @@
 package cn.dashingqi.com.downloadfiledemo;
 
 import android.content.Context;
-import android.telephony.mbms.DownloadProgressListener;
 import android.util.Log;
 
 import java.io.File;
@@ -9,7 +8,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -33,11 +31,10 @@ public class FileDownload {
     private int downloadedSize = 0;
     private int fileSize = 0;
     private DownloadThread[] threads;
-    private File savaFile;
+    private File saveFile;
     private Map<Integer, Integer> data = new ConcurrentHashMap<Integer, Integer>();
     private int block;
     private String downloadUrl;
-    private File saveFile;
 
     public int getThreadSize() {
         return threads.length;
@@ -93,7 +90,7 @@ public class FileDownload {
                     throw new RuntimeException("UnKnow file size");
 
                 String fileName = getFileName(connection);
-                this.savaFile = new File(fileSaveDir, fileName);
+                this.saveFile = new File(fileSaveDir, fileName);
 
                 Map<Integer, Integer> logdata = fileService.getData(downloadUrl);
 
@@ -142,9 +139,9 @@ public class FileDownload {
         return filename;
     }
 
-    public int download(DownloadProgressListener listener) throws Exception {
+    public int download(cn.dashingqi.com.downloadfiledemo.DownloadProgressListener listener) throws Exception {
         try {
-            RandomAccessFile randOut = new RandomAccessFile(this.savaFile, "rwd");
+            RandomAccessFile randOut = new RandomAccessFile(this.saveFile, "rwd");
             if (this.fileSize > 0)
                 randOut.setLength(this.fileSize);
             randOut.close();
@@ -185,7 +182,7 @@ public class FileDownload {
             }
 
             if (listener != null)
-                listener.onDownloadSize(this.downloadUrl);
+                listener.onDownloadSize(this.downloadedSize);
 
             if (downloadedSize == this.fileSize)
                 this.fileService.delete(this.downloadUrl);
