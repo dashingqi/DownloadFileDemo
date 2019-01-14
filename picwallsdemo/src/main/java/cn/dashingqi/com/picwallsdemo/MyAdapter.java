@@ -45,13 +45,13 @@ public class MyAdapter extends ArrayAdapter<String> {
     private final LruCache<String, Bitmap> mLruCahce;
     private int itemHeight;
     private HashSet<WorkTask> collectionTask;
-    private  DiskLruCache mDiskLruCache;
+    private DiskLruCache mDiskLruCache;
     private BufferedOutputStream out;
     private BufferedInputStream in;
     private HttpURLConnection urlConnection;
 
-    public MyAdapter(@NonNull Context context, int resource, int textViewResourceId, @NonNull String[] objects, GridView mGridView) {
-        super(context, resource, textViewResourceId, objects);
+    public MyAdapter(@NonNull Context context, int resource, @NonNull String[] objects, GridView mGridView) {
+        super(context, resource, objects);
         this.mGridView = mGridView;
         collectionTask = new HashSet<>();
 
@@ -100,6 +100,7 @@ public class MyAdapter extends ArrayAdapter<String> {
     }
 
     private void loadBitmaps(ImageView mImageView, String imageUrl) {
+        //先从内存缓存中获取数据
         Bitmap bitmap = getBitmapFromLruCache(imageUrl);
 
         if (bitmap != null) {
@@ -118,9 +119,9 @@ public class MyAdapter extends ArrayAdapter<String> {
 
     private File getDiskLruCachePath(Context context, String name) {
         String path;
-        if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()) || Environment.getExternalStorageDirectory() != null) {
+        if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()) || !Environment.isExternalStorageRemovable()) {
 
-            path = Environment.getDownloadCacheDirectory().getPath();
+            path = context.getExternalCacheDir().getPath();
 
         } else {
             path = context.getCacheDir().getPath();
@@ -149,7 +150,6 @@ public class MyAdapter extends ArrayAdapter<String> {
                     OutputStream outputStream = edit.newOutputStream(0);
                     if (edit != null) {
                         if (downLoadValueFromNetWork(imageUrl, outputStream)) {
-
                             edit.commit();
                         } else {
                             edit.abort();
@@ -166,6 +166,10 @@ public class MyAdapter extends ArrayAdapter<String> {
                     if (fileDescriptor != null) {
                         bitmap = BitmapFactory.decodeFileDescriptor(fileDescriptor);
                     }
+
+                    if (bitmap != null) {
+                        addBitmapToMemoryCache(bitmap, imageUrl);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -177,14 +181,26 @@ public class MyAdapter extends ArrayAdapter<String> {
 
         @Override
         protected void onPostExecute(Bitmap bitmap) {
-
             super.onPostExecute(bitmap);
             ImageView mImageView = mGridView.findViewWithTag(imageUrl);
-            if (bitmap != null) {
+            if (bitmap != null && mImageView != null) {
                 mImageView.setImageBitmap(bitmap);
             }
             collectionTask.remove(this);
         }
+    }
+
+    /**
+     * 将Bitmap添加到内存缓存中
+     *
+     * @param bitmap
+     * @param imageUrl
+     */
+    private void addBitmapToMemoryCache(Bitmap bitmap, String imageUrl) {
+        if (getBitmapFromLruCache(imageUrl) == null) {
+            mLruCahce.put(imageUrl, bitmap);
+        }
+
     }
 
     private boolean downLoadValueFromNetWork(String imageUrl, OutputStream outputStream) {
